@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Resto Mini</title>
+<style>
+  :root{
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+
+    --pink-pale:#ffe4ec;
+    --pink:#ffb6c9;
+    --pink-deep:#ff8fab;
+    --pink-text:#d6547a;
+    --blue-pale:#e3f6fd;
+    --blue:#a8d8ea;
+    --blue-deep:#6ec6dd;
+    --blue-text:#2f8fae;
+    --ink:#4a4458;
+    --ink-soft:#7c8a9a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
+  html,body{
+    height:100%; margin:0; padding:0; overflow:hidden; overscroll-behavior:none;
+    font-family:'Segoe UI',Roboto,Arial,sans-serif;
+    -webkit-user-select:none; user-select:none;
+    background:var(--pink-pale);
+  }
+  #app{
+    position:fixed; inset:0;
+    display:flex; flex-direction:column;
+    padding-top:var(--safe-t); padding-left:var(--safe-l); padding-right:var(--safe-r);
+    background:linear-gradient(180deg, var(--pink-pale) 0%, var(--blue-pale) 100%);
+  }
+  /* ---------- TOPBAR ---------- */
+  #topbar{
+    background:linear-gradient(135deg, var(--pink-deep), var(--blue-deep));
+    color:#fff; padding:8px 10px 8px; flex:0 0 auto;
+    box-shadow:0 3px 8px rgba(0,0,0,.15); z-index:20; position:relative;
+    text-shadow:0 1px 2px rgba(0,0,0,.15);
+  }
+  .row-stats{display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:700;}
+  .row-stats span{white-space:nowrap;}
+  .row-actions{display:flex; gap:8px; margin-top:8px;}
+  .action-btn{
+    flex:1; min-height:46px; border:none; border-radius:10px; background:#fff;
+    font-weight:800; font-size:13px;
+  }
+  #shopBtn{color:var(--pink-text);}
+  #finishBtn{color:var(--blue-text);}
+  #targetWrap{margin-top:6px;}
+  #targetBar{height:10px; background:var(--pink-pale); border-radius:6px; overflow:hidden; border:1px solid var(--pink);}
+  #targetFill{height:100%; background:linear-gradient(90deg,var(--blue),var(--blue-deep)); width:0%; transition:width .2s;}
+  #targetLabel{font-size:10px; margin-top:2px; opacity:.92;}
+  /* ---------- TABLES ZONE ---------- */
+  #tables-zone{
+    flex:0 0 40%; background:linear-gradient(var(--blue-pale),#d3edf8);
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+    gap:8px; padding:8px; overflow:hidden;
+  }
+  .table-card{
+    border-radius:14px; background:#ffffff; border:3px solid var(--pink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative; padding:4px; min-height:56px; overflow:hidden;
+  }
+  .table-card.locked{background:repeating-linear-gradient(45deg,#e3eef5,#e3eef5 6px,#d5e6ef 6px,#d5e6ef 12px); color:#8fa8ba; font-size:11px; font-weight:700; text-align:center;}
+  .table-card.empty{border-style:dashed; color:#9cc0d6; font-size:12px; font-weight:700;}
+  .table-card.match{border-color:var(--blue-deep); box-shadow:0 0 0 4px rgba(78,168,201,.35); animation:pulse 0.9s infinite;}
+  .table-card.shake{animation:shake .3s;}
+  @keyframes pulse{0%{box-shadow:0 0 0 2px rgba(78,168,201,.3);}50%{box-shadow:0 0 0 7px rgba(78,168,201,.15);}100%{box-shadow:0 0 0 2px rgba(78,168,201,.3);}}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+  .patience-wrap{width:80%; height:7px; background:var(--pink-pale); border-radius:5px; overflow:hidden; margin-bottom:2px;}
+  .patience-fill{height:100%; border-radius:5px;}
+  .cust-emoji{font-size:26px; line-height:1;}
+  .order-bubble{
+    position:absolute; top:2px; right:4px; background:#fff; border:2px solid var(--pink-deep);
+    border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+    font-size:15px;
+  }
+  .table-num{position:absolute; bottom:2px; left:5px; font-size:9px; color:#9db3c7; font-weight:700;}
+  /* ---------- KITCHEN ZONE ---------- */
+  #kitchen-zone{
+    flex:1 1 auto; background:linear-gradient(#dcf1fa, #c9e8f5);
+    overflow-y:auto; padding:8px 8px calc(80px + var(--safe-b)) 8px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .section-title{color:#3f7ea3; font-size:12px; font-weight:800; letter-spacing:.4px; margin:2px 0 2px 2px;}
+  #tray-row, #stoves-row{display:flex; gap:6px; flex-wrap:wrap;}
+  .tray-slot, .stove-box{
+    flex:1 1 30%; min-width:56px; min-height:60px; border-radius:12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:var(--ink); position:relative; overflow:hidden;
+  }
+  .tray-slot{background:#ffffff; border:2px dashed var(--blue);}
+  .tray-slot.filled{border-style:solid; border-color:var(--pink-deep); background:#fff0f5; cursor:pointer;}
+  .tray-slot.selected{border-color:var(--blue-deep); box-shadow:0 0 0 4px rgba(78,168,201,.4);}
+  .tray-slot .dish-emoji{font-size:24px;}
+  .fresh-bar{position:absolute; bottom:0; left:0; height:4px; width:100%; background:#66bb6a;}
+  .stove-box{background:#ffffff; border:2px solid var(--pink);}
+  .stove-box.locked{background:repeating-linear-gradient(45deg,#e3eef5,#e3eef5 6px,#d8e9f2 6px,#d8e9f2 12px); color:#93a9ba;}
+  .stove-box.ready{border-color:var(--pink-deep); box-shadow:0 0 0 3px rgba(255,143,171,.4);}
+  .cook-progress{width:85%; height:6px; background:var(--pink-pale); border-radius:4px; overflow:hidden; margin-top:3px;}
+  .cook-fill{height:100%; background:var(--blue-deep);}
+  #menu-row{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
+  .menu-btn{
+    min-height:58px; border:2px solid var(--pink-pale); border-radius:12px; background:#ffffff; color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-weight:800; font-size:12px; padding:4px; line-height:1.3;
+  }
+  .menu-btn:active{background:var(--pink-pale);}
+  .menu-btn .me{font-size:20px;}
+  .menu-btn .mp{font-weight:600; font-size:10px; color:var(--ink-soft);}
+  /* ---------- TOAST ---------- */
+  #toast{
+    position:fixed; left:50%; top:14%; transform:translate(-50%,-10px);
+    background:rgba(0,0,0,.82); color:#fff; padding:9px 16px; border-radius:20px;
+    font-size:13px; font-weight:700; z-index:60; opacity:0; pointer-events:none;
+    transition:opacity .25s, transform .25s; max-width:85%; text-align:center;
+  }
+  #toast.show{opacity:1; transform:translate(-50%,0);}
+  /* ---------- MODAL ---------- */
+  #modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100;
+    display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  #modal-overlay.hidden{display:none;}
+  .modal-box{
+    background:#fff5f8; border-radius:16px; padding:18px; width:100%; max-width:360px;
+    max-height:80vh; overflow-y:auto; color:var(--ink);
+  }
+  .modal-box h2{margin:0 0 10px; font-size:18px;}
+  .upg-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid var(--pink-pale);}
+  .upg-info{font-size:12px;}
+  .upg-info b{display:block; font-size:14px;}
+  .buy-btn{
+    min-width:88px; min-height:44px; border:none; border-radius:10px; background:var(--blue-deep); color:#fff;
+    font-weight:800; font-size:12px; padding:6px 8px;
+  }
+  .buy-btn:disabled{background:#d7e6ee; color:#9fb3c0;}
+  .close-btn, .continue-btn{
+    width:100%; min-height:52px; border:none; border-radius:12px; margin-top:14px;
+    background:var(--pink-deep); color:#fff; font-weight:800; font-size:15px;
+  }
+  .continue-btn{background:var(--blue-deep);}
+  .summary-line{display:flex; justify-content:space-between; font-size:14px; padding:6px 0;}
+  .summary-verdict{text-align:center; font-size:16px; font-weight:800; margin:10px 0; padding:8px; border-radius:10px;}
+  .verdict-pass{background:#c8e6c9; color:#256029;}
+  .verdict-fail{background:#ffcdd2; color:#8a1c1c;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div class="row-stats">
+      <span id="moneyLabel">💰 Rp0</span>
+      <span id="dayLabel">Hari 1</span>
+      <span id="repLabel">⭐ 50</span>
+      <span id="timerLabel">⏱ 90</span>
+    </div>
+    <div id="targetWrap">
+      <div id="targetBar"><div id="targetFill"></div></div>
+      <div id="targetLabel"></div>
+    </div>
+    <div class="row-actions">
+      <button id="shopBtn" class="action-btn" onclick="openShop()">🛒 Upgrade</button>
+      <button id="finishBtn" class="action-btn" onclick="Game.finishDay()">✅ Selesai Hari</button>
+    </div>
+  </div>
+
+  <div id="tables-zone"></div>
+
+  <div id="kitchen-zone">
+    <div class="section-title">🍽️ Siap Saji (tap untuk angkat)</div>
+    <div id="tray-row"></div>
+    <div class="section-title">🔥 Kompor</div>
+    <div id="stoves-row"></div>
+    <div class="section-title">📋 Menu (tap untuk masak)</div>
+    <div id="menu-row"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="modal-overlay" class="hidden">
+  <div class="modal-box" id="modal-content"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const MENU = [
+    {id:'es_teh', name:'Es Teh', emoji:'🥤', price:3000, cook:3},
+    {id:'gado',   name:'Gado-Gado', emoji:'🥗', price:7000, cook:5},
+    {id:'nasgor', name:'Nasi Goreng', emoji:'🍛', price:8000, cook:6},
+    {id:'mie',    name:'Mie Ayam', emoji:'🍜', price:9000, cook:8},
+    {id:'sate',   name:'Sate Ayam', emoji:'🍢', price:12000, cook:10},
+  ];
+  const MENU_BY_ID = {}; MENU.forEach(m=>MENU_BY_ID[m.id]=m);
+  const CUST_EMOJI = ['🧑','👩','👨','🧔','👵','👴','👩‍🦰','👨‍🦱','🧑‍🦳','👩‍🦳','👱','🧕'];
+
+  const MAX_TABLES = 4, MAX_STOVES = 4, TRAY_SLOTS = 6;
+  const FRESH_WINDOW = 8000; // ms full value
+  const DECAY_PER_SEC = 0.05; // 5%/s after fresh window
+  const MIN_FRESH = 0.5;
+
+  const TABLE_COST = {3:60000, 4:120000};
+  const STOVE_COST = {2:50000, 3:90000, 4:140000};
+  const CHAIR_COST = {1:40000, 2:70000, 3:110000};
+  const MAX_CHAIRS = 3;
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function randInt(a,b){ return Math.floor(rand(a,b+1)); }
+  function fmtMoney(n){ return 'Rp' + Math.round(n).toLocaleString('id-ID'); }
+  function fmtTime(s){ s = Math.max(0, Math.ceil(s)); const m = Math.floor(s/60), r = s%60; return m+':' + (r<10?'0':'')+r; }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+
+  function patienceColor(ratio){
+    ratio = clamp(ratio,0,1);
+    let c1,c2,t;
+    if(ratio>0.5){ c1=[255,202,40]; c2=[102,187,106]; t=(ratio-0.5)*2; }
+    else{ c1=[229,57,53]; c2=[255,202,40]; t=ratio*2; }
+    const r = Math.round(c1[0]+(c2[0]-c1[0])*t);
+    const g = Math.round(c1[1]+(c2[1]-c1[1])*t);
+    const b = Math.round(c1[2]+(c2[2]-c1[2])*t);
+    return 'rgb('+r+','+g+','+b+')';
+  }
+
+  let G = null;
+
+  function newGame(){
+    G = {
+      money:0, reputation:50, day:1, dayLen:90, timeLeft:90,
+      target:25000, revenue:0, paused:false, ended:false,
+      tables: Array.from({length:MAX_TABLES},(_,i)=>({unlocked:i<2, customer:null})),
+      stoves: Array.from({length:MAX_STOVES},(_,i)=>({unlocked:i<1, cooking:null})),
+      tray: Array(TRAY_SLOTS).fill(null),
+      selected:null,
+      up:{tables:2, stoves:1, chairs:0},
+      nextSpawn: Date.now()+1500,
+      lastTick: Date.now(),
+      shakeTable:-1,
+    };
+  }
+
+  // ---------- TOAST ----------
+  let toastT=null;
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(()=>{ el.classList.remove('show'); }, 1400);
+  }
+
+  // ---------- GAME ACTIONS ----------
+  function spawnCustomer(tableIdx){
+    const item = MENU[randInt(0, MENU.length-1)];
+    const pmax = rand(20000, 33000);
+    G.tables[tableIdx].customer = {
+      orderId: item.id, patienceMax: pmax, patience: pmax,
+      emoji: CUST_EMOJI[randInt(0,CUST_EMOJI.length-1)]
+    };
+  }
+
+  function maybeSpawn(now){
+    if(now < G.nextSpawn) return;
+    const freeIdx = G.tables.findIndex(t=>t.unlocked && !t.customer);
+    if(freeIdx === -1){ G.nextSpawn = now + 900; return; }
+    spawnCustomer(freeIdx);
+    const base = 4500 - (G.day-1)*180 - (G.reputation-50)*14;
+    const interval = clamp(base, 1500, 6200) + rand(-400,400);
+    G.nextSpawn = now + interval;
+  }
+
+  function startCook(menuIdx){
+    if(G.paused) return;
+    const item = MENU[menuIdx];
+    const sIdx = G.stoves.findIndex(s=>s.unlocked && !s.cooking);
+    if(sIdx === -1){ showToast('Semua kompor sibuk! 🔥'); return; }
+    G.stoves[sIdx].cooking = {itemId:item.id, start:Date.now(), dur:item.cook*1000, done:false};
+    render();
+  }
+
+  function pickOrCancelTray(idx){
+    if(G.paused) return;
+    if(!G.tray[idx]) return;
+    G.selected = (G.selected === idx) ? null : idx;
+    render();
+  }
+
+  function tapTable(tIdx){
+    if(G.paused) return;
+    const t = G.tables[tIdx];
+    if(!t.unlocked) return;
+    if(G.selected === null) return;
+    const dish = G.tray[G.selected];
+    if(!dish){ G.selected = null; render(); return; }
+    if(!t.customer){ showToast('Meja ini kosong'); return; }
+    if(t.customer.orderId !== dish.itemId){
+      showToast('Meja ini pesan menu lain 🙅');
+      G.shakeTable = tIdx;
+      render();
+      setTimeout(()=>{ G.shakeTable=-1; render(); }, 320);
+      return;
+    }
+    // Serve!
+    const item = MENU_BY_ID[dish.itemId];
+    const patienceRatio = clamp(t.customer.patience / t.customer.patienceMax, 0, 1);
+    const age = Date.now() - dish.cookedAt;
+    let freshRatio = 1;
+    if(age > FRESH_WINDOW){
+      freshRatio = Math.max(MIN_FRESH, 1 - ((age-FRESH_WINDOW)/1000)*DECAY_PER_SEC);
+    }
+    const base = item.price * freshRatio;
+    const tip = Math.round(item.price * patienceRatio * 0.4);
+    const total = Math.round(base + tip);
+    G.money += total; G.revenue += total;
+    G.reputation = Math.min(100, G.reputation + 1);
+    showToast('+' + fmtMoney(total) + (tip>0 ? ' (tip '+fmtMoney(tip)+')' : ''));
+    G.tray[G.selected] = null;
+    G.selected = null;
+    t.customer = null;
+    render();
+  }
+
+  function loseCustomer(tIdx){
+    G.tables[tIdx].customer = null;
+    G.reputation = Math.max(0, G.reputation - 5);
+    showToast('Pelanggan pergi! 😠');
+  }
+
+  // ---------- UPGRADES ----------
+  function buyUpgrade(type){
+    if(type==='tables'){
+      const next = G.up.tables+1;
+      if(next>MAX_TABLES) return;
+      const cost = TABLE_COST[next];
+      if(G.money<cost){ showToast('Uang tidak cukup'); return; }
+      G.money -= cost; G.up.tables = next; G.tables[next-1].unlocked = true;
+    } else if(type==='stoves'){
+      const next = G.up.stoves+1;
+      if(next>MAX_STOVES) return;
+      const cost = STOVE_COST[next];
+      if(G.money<cost){ showToast('Uang tidak cukup'); return; }
+      G.money -= cost; G.up.stoves = next; G.stoves[next-1].unlocked = true;
+    } else if(type==='chairs'){
+      const next = G.up.chairs+1;
+      if(next>MAX_CHAIRS) return;
+      const cost = CHAIR_COST[next];
+      if(G.money<cost){ showToast('Uang tidak cukup'); return; }
+      G.money -= cost; G.up.chairs = next;
+    }
+    render();
+    renderShopModal();
+  }
+
+  // ---------- DAY CYCLE ----------
+  function endDay(){
+    if(G.ended) return;
+    G.ended = true; G.paused = true;
+    G.tables.forEach(t=>t.customer=null);
+    openDaySummary();
+  }
+
+  function finishDay(){
+    // Tombol "Selesai Hari": pemain memilih mengakhiri hari lebih awal.
+    if(G.ended) return;
+    G.timeLeft = 0;
+    endDay();
+  }
+
+  function nextDay(){
+    G.day += 1;
+    G.timeLeft = G.dayLen;
+    G.revenue = 0;
+    G.target = Math.round(20000 + G.day*12000);
+    G.ended = false; G.paused = false;
+    G.nextSpawn = Date.now() + 1200;
+    closeModal();
+    render();
+  }
+
+  // ---------- MODALS ----------
+  function openShop(){
+    G.shopWasPaused = G.paused;
+    G.paused = true;
+    renderShopModal();
+    document.getElementById('modal-overlay').classList.remove('hidden');
+  }
+  function closeModal(){
+    document.getElementById('modal-overlay').classList.add('hidden');
+    if(!G.ended) G.paused = false;
+  }
+  function renderShopModal(){
+    const c = document.getElementById('modal-content');
+    let html = '<h2>🛒 Upgrade Warung</h2>';
+
+    html += '<div class="upg-row"><div class="upg-info"><b>🍽️ Meja Tambahan</b>Level '+G.up.tables+'/'+MAX_TABLES+'</div>';
+    if(G.up.tables>=MAX_TABLES){ html += '<button class="buy-btn" disabled>MAX</button>'; }
+    else{ html += '<button class="buy-btn" onclick="Game.buy(\'tables\')">'+fmtMoney(TABLE_COST[G.up.tables+1])+'</button>'; }
+    html += '</div>';
+
+    html += '<div class="upg-row"><div class="upg-info"><b>🔥 Kompor Tambahan</b>Level '+G.up.stoves+'/'+MAX_STOVES+'</div>';
+    if(G.up.stoves>=MAX_STOVES){ html += '<button class="buy-btn" disabled>MAX</button>'; }
+    else{ html += '<button class="buy-btn" onclick="Game.buy(\'stoves\')">'+fmtMoney(STOVE_COST[G.up.stoves+1])+'</button>'; }
+    html += '</div>';
+
+    html += '<div class="upg-row"><div class="upg-info"><b>🪑 Kursi Tunggu</b>Level '+G.up.chairs+'/'+MAX_CHAIRS+' (sabar turun lebih lambat)</div>';
+    if(G.up.chairs>=MAX_CHAIRS){ html += '<button class="buy-btn" disabled>MAX</button>'; }
+    else{ html += '<button class="buy-btn" onclick="Game.buy(\'chairs\')">'+fmtMoney(CHAIR_COST[G.up.chairs+1])+'</button>'; }
+    html += '</div>';
+
+    html += '<div style="margin-top:10px;font-size:12px;color:var(--ink-soft);">💰 Uang saat ini: '+fmtMoney(G.money)+'</div>';
+    html += '<button class="close-btn" onclick="Game.closeShop()">Tutup</button>';
+    c.innerHTML = html;
+  }
+  function closeShop(){
+    G.paused = G.shopWasPaused || false;
+    closeModal();
+  }
+
+  function openDaySummary(){
+    const c = document.getElementById('modal-content');
+    const pass = G.revenue >= G.target;
+    let html = '<h2>📅 Hari '+G.day+' Selesai</h2>';
+    html += '<div class="summary-line"><span>Pendapatan hari ini</span><b>'+fmtMoney(G.revenue)+'</b></div>';
+    html += '<div class="summary-line"><span>Target</span><b>'+fmtMoney(G.target)+'</b></div>';
+    html += '<div class="summary-line"><span>Total Uang</span><b>'+fmtMoney(G.money)+'</b></div>';
+    html += '<div class="summary-line"><span>Reputasi</span><b>⭐ '+Math.round(G.reputation)+'</b></div>';
+    html += '<div class="summary-verdict '+(pass?'verdict-pass':'verdict-fail')+'">'+(pass?'🎉 Target Tercapai!':'😥 Target Belum Tercapai')+'</div>';
+    html += '<button class="continue-btn" onclick="Game.nextDay()">Mulai Hari '+(G.day+1)+' ▶</button>';
+    c.innerHTML = html;
+    document.getElementById('modal-overlay').classList.remove('hidden');
+  }
+
+  // ---------- RENDER ----------
+  function renderTopbar(){
+    document.getElementById('moneyLabel').textContent = '💰 ' + fmtMoney(G.money);
+    document.getElementById('dayLabel').textContent = 'Hari ' + G.day;
+    document.getElementById('repLabel').textContent = '⭐ ' + Math.round(G.reputation);
+    document.getElementById('timerLabel').textContent = '⏱ ' + fmtTime(G.timeLeft);
+    const pct = clamp((G.revenue/G.target)*100, 0, 100);
+    document.getElementById('targetFill').style.width = pct + '%';
+    document.getElementById('targetLabel').textContent = fmtMoney(G.revenue) + ' / ' + fmtMoney(G.target);
+  }
+
+  function renderTables(){
+    const zone = document.getElementById('tables-zone');
+    let html = '';
+    for(let i=0;i<MAX_TABLES;i++){
+      const t = G.tables[i];
+      if(!t.unlocked){
+        html += '<div class="table-card locked">🔒 Meja Terkunci<br><span style="font-size:9px;">(beli di Upgrade)</span></div>';
+        continue;
+      }
+      if(!t.customer){
+        html += '<div class="table-card empty" onclick="Game.tapTable('+i+')">Meja Kosong<div class="table-num">Meja '+(i+1)+'</div></div>';
+        continue;
+      }
+      const cu = t.customer;
+      const ratio = clamp(cu.patience/cu.patienceMax,0,1);
+      const col = patienceColor(ratio);
+      let cls = 'table-card';
+      if(G.selected!==null && G.tray[G.selected] && G.tray[G.selected].itemId===cu.orderId) cls += ' match';
+      if(G.shakeTable===i) cls += ' shake';
+      const orderItem = MENU_BY_ID[cu.orderId];
+      html += '<div class="'+cls+'" onclick="Game.tapTable('+i+')">' +
+        '<div class="order-bubble">'+orderItem.emoji+'</div>' +
+        '<div class="patience-wrap"><div class="patience-fill" style="width:'+(ratio*100)+'%;background:'+col+';"></div></div>' +
+        '<div class="cust-emoji">'+cu.emoji+'</div>' +
+        '<div class="table-num">Meja '+(i+1)+'</div>' +
+        '</div>';
+    }
+    zone.innerHTML = html;
+  }
+
+  function renderTray(){
+    const row = document.getElementById('tray-row');
+    let html = '';
+    for(let i=0;i<TRAY_SLOTS;i++){
+      const d = G.tray[i];
+      if(!d){ html += '<div class="tray-slot"></div>'; continue; }
+      const item = MENU_BY_ID[d.itemId];
+      const age = Date.now() - d.cookedAt;
+      let freshRatio = 1;
+      if(age > FRESH_WINDOW) freshRatio = Math.max(MIN_FRESH, 1-((age-FRESH_WINDOW)/1000)*DECAY_PER_SEC);
+      const barColor = freshRatio>0.8 ? '#66bb6a' : (freshRatio>0.6 ? '#ffca28' : '#e53935');
+      let cls = 'tray-slot filled';
+      if(G.selected===i) cls += ' selected';
+      html += '<div class="'+cls+'" onclick="Game.pickTray('+i+')">' +
+        '<div class="dish-emoji">'+item.emoji+'</div>' +
+        '<div>'+Math.round(item.price*freshRatio)+'</div>' +
+        '<div class="fresh-bar" style="width:'+(freshRatio*100)+'%;background:'+barColor+';"></div>' +
+        '</div>';
+    }
+    row.innerHTML = html;
+  }
+
+  function renderStoves(){
+    const row = document.getElementById('stoves-row');
+    let html = '';
+    for(let i=0;i<MAX_STOVES;i++){
+      const s = G.stoves[i];
+      if(!s.unlocked){ html += '<div class="stove-box locked">🔒</div>'; continue; }
+      if(!s.cooking){ html += '<div class="stove-box">Kosong</div>'; continue; }
+      const item = MENU_BY_ID[s.cooking.itemId];
+      const elapsed = Date.now() - s.cooking.start;
+      const pct = clamp((elapsed/s.cooking.dur)*100,0,100);
+      if(pct>=100){
+        html += '<div class="stove-box ready">'+item.emoji+'<br>Siap!</div>';
+      } else {
+        html += '<div class="stove-box">'+item.emoji+
+          '<div class="cook-progress"><div class="cook-fill" style="width:'+pct+'%;"></div></div></div>';
+      }
+    }
+    row.innerHTML = html;
+  }
+
+  function renderMenu(){
+    const row = document.getElementById('menu-row');
+    let html = '';
+    MENU.forEach((m,idx)=>{
+      html += '<button class="menu-btn" onclick="Game.startCook('+idx+')">' +
+        '<span class="me">'+m.emoji+'</span>' + m.name +
+        '<span class="mp">'+fmtMoney(m.price)+' · '+m.cook+'s</span>' +
+        '</button>';
+    });
+    row.innerHTML = html;
+  }
+
+  function render(){
+    renderTopbar();
+    renderTables();
+    renderTray();
+    renderStoves();
+    renderMenu();
+  }
+
+  // ---------- MAIN LOOP ----------
+  function tick(){
+    const now = Date.now();
+    const delta = now - G.lastTick;
+    G.lastTick = now;
+
+    if(!G.paused){
+      // day timer
+      G.timeLeft -= delta/1000;
+      if(G.timeLeft <= 0){
+        G.timeLeft = 0;
+        endDay();
+      }
+
+      // patience decay
+      const decayFactor = 1 - G.up.chairs*0.12;
+      G.tables.forEach((t,i)=>{
+        if(t.unlocked && t.customer){
+          t.customer.patience -= delta*decayFactor;
+          if(t.customer.patience <= 0){
+            loseCustomer(i);
+          }
+        }
+      });
+
+      // stove -> tray transfer
+      G.stoves.forEach((s)=>{
+        if(s.unlocked && s.cooking){
+          const elapsed = now - s.cooking.start;
+          if(elapsed >= s.cooking.dur){
+            const freeSlot = G.tray.findIndex(x=>!x);
+            if(freeSlot !== -1){
+              G.tray[freeSlot] = {itemId:s.cooking.itemId, cookedAt: s.cooking.start + s.cooking.dur};
+              s.cooking = null;
+            }
+          }
+        }
+      });
+
+      maybeSpawn(now);
+    }
+
+    render();
+    requestAnimationFrame(loopWrapper);
+  }
+
+  let lastFrameTime = 0;
+  function loopWrapper(ts){
+    if(ts - lastFrameTime >= 150){
+      lastFrameTime = ts;
+      tick();
+    } else {
+      requestAnimationFrame(loopWrapper);
+    }
+  }
+
+  // ---------- EXPOSE ----------
+  window.Game = {
+    startCook, pickTray: pickOrCancelTray, tapTable, buy: buyUpgrade,
+    closeShop, nextDay, finishDay
+  };
+  window.openShop = openShop;
+
+  // Cegah pinch-zoom multi-jari. Double-tap-zoom sudah dicegah oleh
+  // CSS touch-action:manipulation + viewport user-scalable=no di atas,
+  // jadi TIDAK perlu logika touchend/preventDefault tambahan di sini —
+  // logika semacam itu justru menelan tap kedua saat pemain tap cepat
+  // berturut-turut (misalnya tap hidangan lalu langsung tap meja).
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+
+  // ---------- INIT ----------
+  newGame();
+  render();
+  showToast('Hari 1 dimulai! Selamat berjualan 🍳');
+  requestAnimationFrame(loopWrapper);
+
+})();
+</script>
+</body>
+</html>
